@@ -1,0 +1,1 @@
+/usr/bin/cc -g -Wl,--dependency-file=CMakeFiles/dwerb.dir/link.d CMakeFiles/dwerb.dir/dwerb.c.o -o dwerb
