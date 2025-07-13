@@ -1,10 +1,16 @@
-/**** includes ****/
 #include <ctype.h>
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/errno.h>
 #include <termios.h>
 #include <unistd.h>
+
+/**** defines ****/
+// taking a parameter k and using a BITWISE AND operation to set it to the
+// Ctrl+parameter key
+//
+#define CTRL_KEY(k) ((k) & 0x1f)
 
 /**** data ****/
 struct termios orig_termios;
@@ -12,6 +18,8 @@ struct termios orig_termios;
 /**** terminal ****/
 // error handling, gives out what char gave the error
 void die(const char *s) {
+  write(STDOUT_FILENO, "\x1b[2J", 4);
+  write(STDOUT_FILENO, "\x1b[H", 3);
   perror(s);
   exit(1);
 }
@@ -52,7 +60,7 @@ void enableRawMode() {
   raw.c_cflag &= ~(CS8);
   // VMIN is the minimum number of bytes needed before read() returns a value
   raw.c_cc[VMIN] = 0;
-  // VTIME is the maximum number of time before read() returns something
+  // VTIME is the maximum time before read() returns something
   raw.c_cc[VTIME] = 1;
 
   if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw) == -1) {
@@ -60,28 +68,38 @@ void enableRawMode() {
   }
 }
 
+/**** output ****/
+void editorRefreshScreen() {
+  write(STDOUT_FILENO, "\x1b[2J", 4);
+  write(STDOUT_FILENO, "x1b[H", 3);
+}
+char editorReadKey() {
+  int nread;
+  char c;
+  while ((nread = read(STDIN_FILENO, &c, 1)) != 1) {
+    if (nread == -1 && errno != EAGAIN)
+      die("read");
+  }
+  return c;
+}
+/*** input ***/
+void editorProcessKeypress() {
+  char c = editorReadKey();
+  switch (c) {
+  case CTRL_KEY('q'):
+    write(STDOUT_FILENO, "\x1b[2J", 4);
+    write(STDOUT_FILENO, "x1b[H", 3);
+    exit(0);
+    break;
+  }
+}
+
 /**** init ****/
 int main() {
   enableRawMode();
   while (1) {
-    char c = '\0';
-    // exits when you have q in the stream
-    if (read(STDIN_FILENO, &c, 1) == -1) {
-      die("tcsetattr");
-    };
-
-    // if a control character return the ASCII value
-    if (iscntrl(c)) {
-      // do a carriage return \r in printf to fix the lack of OPOST
-      printf("%d\r\n", c);
-      // else return ascii value and the character
-    } else {
-      printf("%d ('%c')\r\n", c, c);
-    }
-    if (c == 'q') {
-      break;
-    }
+    editorRefreshScreen();
+    editorProcessKeypress();
   }
-
   return 0;
 }
