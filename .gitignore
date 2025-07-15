@@ -3,6 +3,7 @@ out
 .cache
 compile_commands.json
 out
+out/Debug
 out/Debug/.cmake
 out/Debug/.cmake/api/v1/reply/cmakeFiles-v1-1c05e6f405186081dcf4.json
 out/Debug/.cmake/api/v1/reply/codemodel-v2-5a5f1c216f467c655fbf.json
@@ -44,3 +45,4 @@ out/Debug/cmake_install.cmake
 out/Debug/dwerb
 out/Debug/dwerb
 out/Debug/dwerb
+out

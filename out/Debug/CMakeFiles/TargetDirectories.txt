@@ -1,3 +1,0 @@
-/home/aryaman/Desktop/dev/myowntexteditor/out/Debug/CMakeFiles/dwerb.dir
-/home/aryaman/Desktop/dev/myowntexteditor/out/Debug/CMakeFiles/edit_cache.dir
-/home/aryaman/Desktop/dev/myowntexteditor/out/Debug/CMakeFiles/rebuild_cache.dir
