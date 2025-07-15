@@ -46,14 +46,14 @@ void enableRawMode() {
 
   raw.c_iflag &= ~(BRKINT | ICRNL | INPCK | ISTRIP | IXON);
   raw.c_lflag &= ~(ECHO | ICANON | ISIG | IEXTEN);
-  // disabling OPOST disables the /n to /r/n translation and so instead of
+  // disabling OPOST disables the \n to \r\n translation and so instead of
   // printing
   /*
    Expected     Output
    a            a
    b              b
    c                c
-  A carriage return would fix this and this is implemented in printf
+  A carriage return or \r would fix this and this is implemented in printf
   */
 
   raw.c_oflag &= ~(OPOST);
@@ -69,9 +69,22 @@ void enableRawMode() {
 }
 
 /**** output ****/
+void editorDrawRows() {
+  int y;
+  // harcoding terminal size to 24 come back and change
+  for (y = 0; y < 24; y++) {
+    write(STDOUT_FILENO, "~\r\n", 3);
+  }
+}
+
 void editorRefreshScreen() {
+  // clearing screen
   write(STDOUT_FILENO, "\x1b[2J", 4);
-  write(STDOUT_FILENO, "x1b[H", 3);
+  // repositioning cursor
+  write(STDOUT_FILENO, "\x1b[H", 3);
+
+  editorDrawRows();
+  write(STDOUT_FILENO, "\x1b[H", 3);
 }
 char editorReadKey() {
   int nread;
@@ -82,13 +95,14 @@ char editorReadKey() {
   }
   return c;
 }
+
 /*** input ***/
 void editorProcessKeypress() {
   char c = editorReadKey();
   switch (c) {
   case CTRL_KEY('q'):
     write(STDOUT_FILENO, "\x1b[2J", 4);
-    write(STDOUT_FILENO, "x1b[H", 3);
+    write(STDOUT_FILENO, "\x1b[H", 3);
     exit(0);
     break;
   }
