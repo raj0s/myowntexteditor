@@ -19,6 +19,8 @@
 
 // create a struct which holds the holds the state of the terminal
 struct editorConfig {
+  int srows;
+  int scols;
   struct termios orig_termios;
 };
 
@@ -26,19 +28,6 @@ struct editorConfig E;
 
 /**** terminal ****/
 
-int getWindowSize(int *rows, int *cols) {
-  struct winsize ws;
-  if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws) == -1 || ws.ws_col == 0) {
-    return -1;
-  } else {
-    // we pass the values by setting the values to the int references of cols
-    // and rows that were passed orignally in the function this helps C returns
-    // multiple things along with having functions return multiple values in C.
-    *cols = ws.ws_col;
-    *rows = ws.ws_row;
-    return 0;
-  }
-}
 // error handling, gives out what char gave the error
 void die(const char *s) {
   write(STDOUT_FILENO, "\x1b[2J", 4);
@@ -91,11 +80,58 @@ void enableRawMode() {
   }
 }
 
+char editorReadKey() {
+  int nread;
+  char c;
+  while ((nread = read(STDIN_FILENO, &c, 1)) != 1) {
+    if (nread == -1 && errno != EAGAIN)
+      die("read");
+  }
+  return c;
+}
+
+int getCursorPosition(int *rows, int *cols) {
+  char buf[32];
+  unsigned int i = 0;
+
+  if (write(STDOUT_FILENO, "\x1b[6n", 4) != 4)
+    return -1;
+
+  while (i < sizeof(buf) - 1) {
+    if (read(STDIN_FILENO, &buf[i], 1) != 1)
+      break;
+    if (buf[i] == 'R')
+      break;
+    i++;
+  }
+  buf[i] = '\0';
+  printf("\r\n&buf[1]: %s\r\n", &buf[1]);
+  editorReadKey();
+  return -1;
+}
+
+int getWindowSize(int *rows, int *cols) {
+  struct winsize ws;
+  if (1 || ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws) == -1 || ws.ws_col == 0) {
+    if (write(STDOUT_FILENO, "\x1b[999C\x1b[999B", 12) != 12)
+      return -1;
+    return getCursorPosition(rows, cols);
+  } else {
+    // we pass the values by setting the values to the int references of cols
+    // and rows that were passed orignally in the function this helps C
+    // returns multiple things along with having functions return multiple
+    // values in C.
+    *cols = ws.ws_col;
+    *rows = ws.ws_row;
+    return 0;
+  }
+}
+
 /**** output ****/
 void editorDrawRows() {
   int y;
   // harcoding terminal size to 24 come back and change
-  for (y = 0; y < 24; y++) {
+  for (y = 0; y < E.srows; y++) {
     write(STDOUT_FILENO, "~\r\n", 3);
   }
 }
@@ -108,15 +144,6 @@ void editorRefreshScreen() {
 
   editorDrawRows();
   write(STDOUT_FILENO, "\x1b[H", 3);
-}
-char editorReadKey() {
-  int nread;
-  char c;
-  while ((nread = read(STDIN_FILENO, &c, 1)) != 1) {
-    if (nread == -1 && errno != EAGAIN)
-      die("read");
-  }
-  return c;
 }
 
 /*** input ***/
@@ -132,8 +159,14 @@ void editorProcessKeypress() {
 }
 
 /**** init ****/
+void initEditor() {
+  if (getWindowSize(&E.srows, &E.scols) == -1)
+    die("getWindowSize");
+}
+
 int main() {
   enableRawMode();
+  initEditor();
   while (1) {
     editorRefreshScreen();
     editorProcessKeypress();
